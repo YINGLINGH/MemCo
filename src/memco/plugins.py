@@ -1,0 +1,53 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Protocol
+
+from memco.bucket import Bucket
+
+
+class Tokenizer(Protocol):
+    def pick(self, text: str) -> str: ...
+
+
+class VectorIndex(Protocol):
+    @property
+    def ok(self) -> bool: ...
+
+    def add(self, keyword: str, text: str) -> bool: ...
+
+    def query(self, keyword: str, top_k: int = 3) -> tuple[list[str], bool]: ...
+
+    def rebuild(self, buckets: list[Bucket]) -> None: ...
+
+
+class Cache(Protocol):
+    def set_item(self, user_id: str, stamp: str, keyword: str, text: str) -> None: ...
+
+    def get_by_time(self, user_id: str, stamp: str) -> str | None: ...
+
+    def get_by_keyword(self, user_id: str, keyword: str) -> str | None: ...
+
+    def delete_item(self, user_id: str, stamp: str, keyword: str) -> None: ...
+
+
+class Teacher(Protocol):
+    def complete(self, task: str, ctx: dict) -> dict: ...
+
+
+class Snapshot(Protocol):
+    def load(self, path: str) -> None: ...
+
+
+class Backup(Protocol):
+    def dump(self, root: Path) -> None: ...
+
+    def restore(self, root: Path) -> None: ...
+
+
+class Bus(Protocol):
+    def connected(self) -> bool: ...
+
+    def publish(self, topic: str, payload: dict) -> bool: ...
+
+    def subscribe(self, topic: str, handler) -> None: ...
