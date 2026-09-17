@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MemCo · 端云智能体专用记忆核</title>
+  <style>
+    :root {
+      --paper: #fff7ee;
+      --sheet: #fffaf4;
+      --ink: #4a3228;
+      --mute: #8a6a58;
+      --line: #ead7c4;
+      --peach: #f3c2a8;
+      --honey: #e2a85a;
+      --coral: #d98978;
+      --rose: #c97b8e;
+      --edge: #d9845a;
+      --cloud: #c9a06a;
+      --sage: #8aa37a;
+      --dark: #2b1d18;
+      --pin: #16110e;
+      --pad: 44px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background:
+        radial-gradient(1200px 700px at 12% -8%, rgba(243, 194, 168, 0.55), transparent 58%),
+        radial-gradient(900px 640px at 92% 8%, rgba(226, 168, 90, 0.28), transparent 55%),
+        radial-gradient(800px 520px at 50% 100%, rgba(201, 123, 142, 0.16), transparent 50%),
+        var(--paper);
+      color: var(--ink);
+      font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+      line-height: 1.7;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 8;
+      opacity: 0.085;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.55'/></svg>");
+    }
+    .poster {
+      width: min(1180px, calc(100% - 32px));
+      margin: 28px auto 48px;
+      background: var(--sheet);
+      border: 1px solid rgba(74, 50, 40, 0.08);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.8) inset,
+        0 28px 80px rgba(74, 50, 40, 0.12);
+    }
+    .serif {
+      font-family: "Iowan Old Style", "Songti SC", "Source Han Serif SC", "Noto Serif SC", "Hiragino Mincho ProN", serif;
+    }
+    h1, h2, h3, .name, .tag, .cname, .quote {
+      word-break: keep-all;
+      line-break: strict;
+    }
+
+    .hero {
+      position: relative;
+      min-height: 560px;
+      isolation: isolate;
+    }
+    .hero img.bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 42%;
+    }
+    .hero .veil {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(43, 29, 24, 0.06) 0%, rgba(43, 29, 24, 0.08) 42%, rgba(43, 29, 24, 0.74) 100%);
+    }
+    .hero .copy {
+      position: relative;
+      z-index: 1;
+      min-height: 560px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 24px var(--pad) 40px;
+      color: #fff8f1;
+    }
+    .hero .toprow {
+      position: absolute;
+      top: 22px;
+      right: var(--pad);
+    }
+    .hero .toprow a {
+      color: #fff6ea;
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      padding: 7px 14px;
+      border: 1px solid rgba(255, 246, 234, 0.35);
+      border-radius: 999px;
+      background: rgba(43, 29, 24, 0.22);
+      backdrop-filter: blur(8px);
+    }
+    .hero h1 {
+      font-weight: 400;
+      font-size: clamp(56px, 7vw, 92px);
+      letter-spacing: 0.1em;
+      line-height: 0.95;
+    }
+    .hero h1 .co { color: #ffd27a; }
+    .hero .cname {
+      margin-top: 10px;
+      font-size: 18px;
+      letter-spacing: 0.18em;
+      font-weight: 400;
+      color: #ffe8d2;
+    }
+    .hero .tag {
+      margin-top: 8px;
+      font-size: 16px;
+      letter-spacing: 0.16em;
+      font-weight: 400;
+      color: rgba(255, 232, 210, 0.88);
+    }
+
+    .co-band {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 420px;
+      border-bottom: 1px solid var(--line);
+    }
+    .co-band .text {
+      padding: 40px var(--pad);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .sect-label {
+      font-size: 12px;
+      letter-spacing: 0.22em;
+      color: var(--mute);
+      margin-bottom: 8px;
+    }
+    h2 {
+      font-size: 30px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      line-height: 1.35;
+    }
+    .co-band h2 {
+      letter-spacing: 0;
+      display: flex;
+      align-items: center;
+      line-height: 1;
+    }
+    .co-band h2 .en {
+      margin-left: 0.22em;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      font-size: 0.92em;
+      transform: translateY(0.08em);
+    }
+    .co-band p.intro {
+      margin-top: 12px;
+      color: var(--mute);
+      font-size: 15px;
+      max-width: 28em;
+    }
+    .pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 22px;
+      align-items: stretch;
+    }
+    .pair article {
+      padding: 16px;
+      border-radius: 16px;
+      background: #fff3e6;
+      border: 1px solid rgba(217, 137, 120, 0.18);
+    }
+    .pair h3 {
+      font-size: 16px;
+      letter-spacing: 0.1em;
+      margin: 0 0 8px;
+    }
+    .pair p { font-size: 14px; color: var(--mute); }
+    .co-band .pic { min-height: 100%; }
+    .co-band .pic img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 58%;
+      display: block;
+    }
+
+    .topo {
+      padding: 40px var(--pad);
+      border-bottom: 1px solid var(--line);
+    }
+    .topo-grid {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: 1fr 88px 1fr;
+      gap: 8px;
+      align-items: stretch;
+    }
+    .mqtt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+    }
+    .mqtt svg {
+      width: 72px;
+      height: 22px;
+      overflow: visible;
+    }
+    .mqtt b {
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      font-size: 13px;
+      color: #b7812f;
+    }
+    .realm {
+      border-radius: 20px;
+      padding: 22px 24px 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .realm.edge {
+      background: linear-gradient(165deg, #fff1e4 0%, #f8d7c2 100%);
+      border: 1px solid rgba(217, 132, 90, 0.28);
+    }
+    .realm.cloud {
+      background: linear-gradient(165deg, #fff6e8 0%, #ead2a8 100%);
+      border: 1px solid rgba(201, 160, 106, 0.35);
+    }
+    .realm .where {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      color: var(--mute);
+    }
+    .realm h3 {
+      font-size: 26px;
+      margin: 4px 0 8px;
+      letter-spacing: 0.16em;
+    }
+    .realm p { font-size: 14px; color: #6d5042; flex: 1; }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .chips span {
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.62);
+      border: 1px solid rgba(74, 50, 40, 0.08);
+    }
+
+    .five { padding: 40px var(--pad) 8px; }
+    .five-head { margin-bottom: 20px; }
+    .five-head h2 { margin-bottom: 12px; }
+    .legend { display: flex; gap: 8px; }
+    .stamp {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid currentColor;
+    }
+    .stamp.born { color: var(--sage); }
+    .stamp.keep { color: #b7812f; }
+    .stamp.let { color: var(--rose); }
+    .lane { margin-bottom: 20px; }
+    .lane-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .lane-title h3 {
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      color: var(--mute);
+      font-weight: 500;
+    }
+    .lane-title .bar {
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+    .cards { display: grid; gap: 12px; align-items: stretch; }
+    .cards.edge { grid-template-columns: 1fr 1fr 1fr; }
+    .cards.cloud { grid-template-columns: 1fr 1fr; }
+    .card {
+      background: #fffdf9;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px 18px 16px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .card::after {
+      content: "";
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 0;
+      height: 3px;
+      border-radius: 0 0 3px 3px;
+    }
+    .card.edge::after { background: var(--edge); }
+    .card.cloud::after { background: var(--cloud); }
+    .card header.ch {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .pin {
+      width: 80px;
+      height: 80px;
+      border-radius: 14px;
+      background: #fff3e6;
+      border: 1.5px solid rgba(226, 168, 90, 0.45);
+      box-shadow: 0 0 0 3px rgba(226, 168, 90, 0.1);
+      flex: none;
+      overflow: hidden;
+    }
+    .pin img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .card .name {
+      font-size: 20px;
+      letter-spacing: 0.08em;
+      font-weight: 500;
+    }
+    .life {
+      display: grid;
+      gap: 8px;
+      flex: 1;
+      grid-template-rows: 1fr 1fr 1fr;
+    }
+    .life section {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fff6ec;
+    }
+    .life h4 {
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .life p {
+      font-size: 13.5px;
+      color: #6a4e40;
+      line-height: 1.7;
+    }
+    .life .born h4 { color: var(--sage); }
+    .life .keep h4 { color: #b7812f; }
+    .life .let h4 { color: var(--rose); }
+
+    .path {
+      margin: 12px var(--pad) 28px;
+      padding: 24px 28px 22px;
+      border-radius: 20px;
+      background: #2b1d18;
+      color: #fff6ea;
+    }
+    .path h2 { color: #ffe7c8; font-size: 24px; }
+    .path .hint {
+      margin-top: 6px;
+      color: rgba(255, 230, 200, 0.72);
+      font-size: 14px;
+    }
+    .steps {
+      display: flex;
+      align-items: stretch;
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .steps li {
+      list-style: none;
+      flex: 1;
+      position: relative;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255, 247, 238, 0.06);
+      border: 1px solid rgba(255, 210, 122, 0.18);
+    }
+    .steps li:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: calc(100% + 5px);
+      top: 50%;
+      width: 7px;
+      height: 7px;
+      margin-top: -4px;
+      border-right: 1.5px solid #ffd27a;
+      border-top: 1.5px solid #ffd27a;
+      transform: rotate(45deg);
+    }
+    .steps b {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      color: #ffd27a;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .steps span { font-size: 13.5px; display: block; }
+    .fail {
+      margin-top: 14px;
+      font-size: 14px;
+      color: #f3c2a8;
+    }
+
+    .close {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 8px var(--pad) 32px;
+    }
+    .close .mascot {
+      width: 96px;
+      height: 96px;
+      flex: none;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid #f3c2a8;
+    }
+    .close .mascot img { width: 100%; height: 100%; object-fit: cover; }
+    .close .quote {
+      font-size: 24px;
+      line-height: 1.45;
+      letter-spacing: 0.04em;
+    }
+    .close .by {
+      margin-top: 6px;
+      font-size: 13px;
+      letter-spacing: 0.18em;
+      color: var(--mute);
+    }
+
+    footer.colophon {
+      border-top: 1px solid var(--line);
+      padding: 14px var(--pad) 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      color: var(--mute);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+    }
+    footer.colophon a { color: var(--mute); text-decoration: none; }
+
+    @media (max-width: 980px) {
+      :root { --pad: 22px; }
+      .co-band, .topo-grid, .cards.edge, .cards.cloud, .pair {
+        grid-template-columns: 1fr;
+      }
+      .steps {
+        flex-direction: column;
+        gap: 16px;
+      }
+      .steps li:not(:last-child)::after {
+        left: 50%;
+        top: auto;
+        bottom: -12px;
+        margin-top: 0;
+        margin-left: -4px;
+        transform: rotate(135deg);
+      }
+      .topo-grid { gap: 16px; }
+      .mqtt { flex-direction: row; gap: 10px; padding: 2px 0 8px; }
+      .hero .toprow { display: none; }
+      .hero, .hero .copy { min-height: 480px; }
+      .hero h1 { letter-spacing: 0.06em; }
+      .hero .cname { font-size: 15px; letter-spacing: 0.08em; }
+      .hero .tag { letter-spacing: 0.08em; font-size: 15px; }
+      .co-band { min-height: 0; }
+      .co-band .pic { height: 220px; }
+      .path { margin-left: 16px; margin-right: 16px; }
+      .close { padding-bottom: 24px; }
+    }
+    @media print {
+      body { background: white; }
+      body::before { display: none; }
+      .poster { width: 100%; margin: 0; border: none; box-shadow: none; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <article class="poster">
+    <header class="hero">
+      <img class="bg" src="assets/memco-poster-hero.png" alt="端侧房间与云侧天空" />
+      <div class="veil"></div>
+      <div class="copy">
+        <div class="toprow"><a href="memory-flow.html">动态演示</a></div>
+        <div>
+          <h1 class="serif">Mem<span class="co">Co</span></h1>
+          <p class="cname serif">端云智能体专用记忆核</p>
+          <p class="tag serif">端云协同 · 人机陪伴</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="co-band">
+      <div class="text">
+        <div class="sect-label">命名</div>
+        <h2 class="serif">何为<span class="en">MemCo</span></h2>
+        <p class="intro">Mem 是记忆。Co 既指端云协同，也指人机陪伴。</p>
+        <div class="pair">
+          <article>
+            <h3 class="serif">端云协同</h3>
+            <p>偏好和近期内容放端侧，缓存和长期档案放云侧。中间走消息总线，投递按约定进行。断连时就近降级。断线本身不算失败。</p>
+          </article>
+          <article>
+            <h3 class="serif">人机陪伴</h3>
+            <p>问偏好，在本地就能答。其余先查短期记忆，没有再问云侧。常被召回的，权重会高一点，不容易先被忘掉。</p>
+          </article>
+        </div>
+      </div>
+      <div class="pic">
+        <img src="assets/memco-companion.png" alt="窗边的人与同伴" />
+      </div>
+    </section>
+
+    <section class="topo">
+      <div class="sect-label">架构</div>
+      <h2 class="serif">记忆分置于端云</h2>
+      <div class="topo-grid">
+        <div class="realm edge">
+          <h3 class="serif">端侧</h3>
+          <p>贴着用户。对话、偏好、快照，都在本地。</p>
+          <div class="chips">
+            <span>偏好</span>
+            <span>短期记忆</span>
+            <span>内化记忆</span>
+          </div>
+        </div>
+        <div class="mqtt">
+          <svg viewBox="0 0 88 28" fill="none" aria-hidden="true">
+            <path d="M6 14h28" stroke="#e2a85a" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M54 14h28" stroke="#e2a85a" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="6" cy="14" r="3.2" stroke="#d9845a" stroke-width="1.4" fill="#fff7ee"/>
+            <circle cx="82" cy="14" r="3.2" stroke="#c9a06a" stroke-width="1.4" fill="#fff7ee"/>
+            <path d="M44 6.5l7.5 7.5-7.5 7.5-7.5-7.5z" stroke="#e2a85a" stroke-width="1.5" fill="#fff4e6"/>
+          </svg>
+          <b>总线</b>
+        </div>
+        <div class="realm cloud">
+          <h3 class="serif">云侧</h3>
+          <p>把更久的事放在云上。缓存保存排好的召回；长期记忆按权重查找，满了再分层遗忘。</p>
+          <div class="chips">
+            <span>记忆缓存</span>
+            <span>长期记忆</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="five">
+      <div class="five-head">
+        <div class="sect-label">五种记忆</div>
+        <h2 class="serif">产生、维持、遗忘</h2>
+        <div class="legend">
+          <span class="stamp born">产生</span>
+          <span class="stamp keep">维持</span>
+          <span class="stamp let">遗忘</span>
+        </div>
+      </div>
+
+      <div class="lane">
+        <div class="lane-title">
+          <h3>端侧</h3>
+          <div class="bar"></div>
+        </div>
+        <div class="cards edge">
+          <article class="card edge">
+            <header class="ch">
+              <div class="pin"><img src="assets/ico-pref.png" alt="" /></div>
+              <div>
+                <div class="name serif">偏好</div>
+              </div>
+            </header>
+            <div class="life">
+              <section class="born">
+                <h4>产生</h4>
+                <p>会话归档后，云侧从这一轮对话里总结喜欢与不喜欢，经总线回写端侧的自身偏好和用户偏好。</p>
+              </section>
+              <section class="keep">
+                <h4>维持</h4>
+                <p>一直留在端侧。问到喜欢或讨厌，就在本地召回，不必走总线。</p>
+              </section>
+              <section class="let">
+                <h4>遗忘</h4>
+                <p>没有容量淘汰。新的回写直接覆盖旧文件。偏好也不随短期记忆一起上传。</p>
+              </section>
+            </div>
+          </article>
+
+          <article class="card edge">
+            <header class="ch">
+              <div class="pin"><img src="assets/ico-stm.png" alt="" /></div>
+              <div>
+                <div class="name serif">短期记忆</div>
+              </div>
+            </header>
+            <div class="life">
+              <section class="born">
+                <h4>产生</h4>
+                <p>会话结束才写入。可以等静默超时，也可以手动结束。约定记下双方，事件能带回源对话，感受只留用户的话。</p>
+              </section>
+              <section class="keep">
+                <h4>维持</h4>
+                <p>没超过容量就一直留着。召回如果不是偏好问题，先查这里。闲聊不会拿去蒸馏。</p>
+              </section>
+              <section class="let">
+                <h4>遗忘</h4>
+                <p>满了且总线通着：上传成功后在端侧删掉，避免和长期记忆重复。断连的话，等概率随机删到容量以内。</p>
+              </section>
+            </div>
+          </article>
+
+          <article class="card edge">
+            <header class="ch">
+              <div class="pin"><img src="assets/ico-inner.png" alt="" /></div>
+              <div>
+                <div class="name serif">内化记忆</div>
+              </div>
+            </header>
+            <div class="life">
+              <section class="born">
+                <h4>产生</h4>
+                <p>云侧把稀缺样本写入蒸馏文件。训练在系统外做。快照路径经总线发到端侧，本系统只加载，不训练。</p>
+              </section>
+              <section class="keep">
+                <h4>维持</h4>
+                <p>快照留在端侧。蒸馏文件只追加，不改已经写下的样本。</p>
+              </section>
+              <section class="let">
+                <h4>遗忘</h4>
+                <p>不删快照。再加载时覆盖当前路径。蒸馏样本也不会在这里清掉。</p>
+              </section>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="lane">
+        <div class="lane-title">
+          <h3>云侧</h3>
+          <div class="bar"></div>
+        </div>
+        <div class="cards cloud">
+          <article class="card cloud">
+            <header class="ch">
+              <div class="pin"><img src="assets/ico-cache.png" alt="" /></div>
+              <div>
+                <div class="name serif">记忆缓存</div>
+              </div>
+            </header>
+            <div class="life">
+              <section class="born">
+                <h4>产生</h4>
+                <p>召回没命中时，对长期记忆和向量排好序，按关键词或时间键把整组结果写进去。</p>
+              </section>
+              <section class="keep">
+                <h4>维持</h4>
+                <p>命中就直接返回这组结果，并给对应的长期记忆加权。过期时间和容量按设定策略淘汰。</p>
+              </section>
+              <section class="let">
+                <h4>遗忘</h4>
+                <p>到期丢掉，或按策略挤出去。长期记忆一旦写入或分层遗忘，缓存整表清空。</p>
+              </section>
+            </div>
+          </article>
+
+          <article class="card cloud">
+            <header class="ch">
+              <div class="pin"><img src="assets/ico-ltm.png" alt="" /></div>
+              <div>
+                <div class="name serif">长期记忆</div>
+              </div>
+            </header>
+            <div class="life">
+              <section class="born">
+                <h4>产生</h4>
+                <p>短期记忆满了，经总线归档入库，写入向量索引。云侧同时清空缓存，总结后的偏好回写端侧。</p>
+              </section>
+              <section class="keep">
+                <h4>维持</h4>
+                <p>用关键词和向量检索。召回命中时权重上升。权重高的档，后面遗忘时也会少删一点。</p>
+              </section>
+              <section class="let">
+                <h4>遗忘</h4>
+                <p>超过长期容量就分层遗忘：按权重分档，高权重少忘、低权重多忘，档内等概率抽取并永久删除。然后清缓存、重建检索。</p>
+              </section>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="path">
+      <div class="sect-label" style="color:#ffd27a">召回</div>
+      <h2 class="serif">召回顺序</h2>
+      <p class="hint">先查端侧，没有再问云侧。总线断开时，只使用端侧的偏好和短期记忆。</p>
+      <ol class="steps">
+        <li><b>偏好</b><span>本地召回</span></li>
+        <li><b>短期</b><span>端侧还留着的近期记忆</span></li>
+        <li><b>总线</b><span>通了问云，断了只用端侧</span></li>
+        <li><b>缓存</b><span>命中即返回，并加权</span></li>
+        <li><b>长期</b><span>检索后写入缓存</span></li>
+      </ol>
+      <p class="fail">总线断连会降级到端侧。需要召回但结果为空，才是优雅失败。</p>
+    </section>
+
+    <section class="close">
+      <div class="mascot"><img src="assets/memco-mascot.png" alt="" /></div>
+      <div>
+        <p class="quote serif">陪着你，也记得你。</p>
+        <p class="by">端云之间 · 人机之间</p>
+      </div>
+    </section>
+
+    <footer class="colophon">
+      <span>端侧 · 偏好 / 短期 / 内化　　云侧 · 缓存 / 长期</span>
+      <a href="memory-flow.html">观看动态演示 →</a>
+    </footer>
+  </article>
+</body>
+</html>

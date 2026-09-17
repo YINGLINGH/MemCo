@@ -38,12 +38,12 @@
       padding: 12px 24px 0;
     }
     svg.scene {
-      width: min(100%, calc((100vh - 176px) * 16 / 9));
-      max-height: calc(100vh - 176px);
+      width: min(100%, calc((100vh - 184px) * 16 / 9));
+      max-height: calc(100vh - 184px);
       display: block;
     }
     .caption-wrap {
-      height: 108px;
+      height: 116px;
       display: grid;
       place-items: center;
       padding: 0 48px;
@@ -285,61 +285,64 @@
         <svg id="ico-play" viewBox="0 0 16 16" fill="#efeae2" style="display:none"><path d="M4 2.4v11.2L13.2 8z"/></svg>
       </button>
       <div class="bar" id="bar"><i id="fill"></i><b id="knob"></b></div>
-      <div class="time" id="clock">00:00 / 03:25</div>
+      <div class="time" id="clock">00:00 / 02:50</div>
       <button class="ctl" id="replay" aria-label="重播">
         <svg viewBox="0 0 16 16" fill="none" stroke="#efeae2" stroke-width="1.5"><path d="M3 8a5 5 0 1 0 1.5-3.6"/><path d="M3 2.4v3.2h3.2"/></svg>
       </button>
     </div>
   </div>
   <script>
-    const DURATION = 205000;
+    const DURATION = 170000;
     const CAPS = [
-      [0, 7500, "MemCo。一套<em>端云协同</em>的智能体记忆系统。"],
-      [7500, 22000, "记忆分置两端。端侧贴近用户，云侧负责更长期的保存。中间走 <em>MQTT</em>，投递语义由 <em>QoS</em> 约定。"],
-      [22000, 36000, "端侧三块：<em>偏好</em>、<em>短期记忆</em>、<em>内化记忆</em>。偏好始终本地可读。"],
-      [36000, 50000, "云侧两块：<em>记忆缓存</em>与<em>长期记忆</em>。缓存存整组排序结果，遵循<em>缓存策略</em>；长期记忆支持关键词命中与<em>向量检索</em>。"],
-      [50000, 68000, "召回先判断是不是偏好问题。是，则端侧本地完成，<em>不发 MQTT</em>。"],
-      [68000, 90000, "否则顺序为：短期记忆 → MQTT 请求云侧。云侧命中缓存即返回该组排序结果，并对对应长期记忆做 <em>boost</em>；未命中再查长期记忆与向量，再写入整组结果。"],
-      [90000, 104000, "会话结束，这一轮才写入短期记忆。端侧的偏好此时不改写。"],
-      [104000, 126000, "短期记忆达到容量，经 MQTT <em>publish</em> 归档。成功后这批短期记忆在端侧<em>永久删除</em>，避免与长期记忆重复。"],
-      [126000, 148000, "云侧并行：写入长期记忆并清空记忆缓存、总结偏好并 MQTT 回传、蒸馏稀缺样本。内化训练在系统外，MemCo 只<em>加载快照</em>。"],
-      [148000, 166000, "若已达容量却 <em>MQTT 断连</em>：写入之后，端侧对短期记忆等概率随机删除，以维持容量。召回降级为仅偏好与短期记忆。"],
-      [166000, 186000, "长期记忆达到容量后<em>分层遗忘</em>：按权重分成若干档，档内等概率抽取，永久删除，并清理缓存、重建检索。"],
-      [186000, 205000, "<em>MQTT 断连不是失败</em>。只有需要召回且结果为空，才记为<em>失败</em>。"]
+      [1800, 6000, "MemCo 是一套<em>端云协同</em>的智能体记忆系统。"],
+      [6000, 18000, "记忆分置两端：端侧贴近用户，云侧承接更长期的保存。中间走 <em>MQTT</em>，投递语义由 <em>QoS</em> 约定。"],
+      [18000, 28000, "端侧三块：<em>偏好</em>、<em>短期记忆</em>、<em>内化记忆</em>。偏好留在本地，随时可读。"],
+      [28000, 38000, "云侧两块：<em>记忆缓存</em>与<em>长期记忆</em>。缓存按<em>缓存策略</em>保存整组排序结果；长期记忆用关键词与<em>向量检索</em>。"],
+      [38000, 50000, "召回时，若是偏好问题，就在端侧本地完成，不必发 <em>MQTT</em>。"],
+      [50000, 58000, "不是偏好，就先看短期记忆；没有，再经 MQTT 问云侧。"],
+      [58000, 72000, "云侧命中缓存，就直接返回该组排序结果，并给对应的长期记忆做 <em>boost</em>。未命中，再查长期记忆与向量，把排好的整组写入缓存。"],
+      [72000, 84000, "会话结束，这一轮才写入短期记忆。端侧偏好此时不动。"],
+      [84000, 104000, "短期记忆达到容量，经 MQTT <em>publish</em> 归档。成功后，这批短期记忆在端侧<em>永久删除</em>，以免与长期记忆重复。"],
+      [104000, 112000, "云侧写入长期记忆，并清空记忆缓存；总结后的偏好经 MQTT 回传端侧。"],
+      [112000, 122000, "稀缺样本在此蒸馏。训练在系统外，MemCo 只<em>加载快照</em>。"],
+      [122000, 140000, "若已达容量却碰上 <em>MQTT 断连</em>：写入之后，端侧对短期记忆等概率随机删除，以维持容量。召回只保留偏好与短期记忆。"],
+      [140000, 156000, "长期记忆达到容量后<em>分层遗忘</em>：按权重分成若干档，档内等概率抽取，永久删除，并清理缓存、重建检索。"],
+      [156000, 167500, "<em>MQTT 断连不是失败</em>。只有需要召回且结果为空，才记为<em>失败</em>。"]
     ];
     const CHAPS = [
       [0, "00  ·  引言"],
-      [7500, "01  ·  拓扑与 MQTT"],
-      [22000, "02  ·  五块记忆"],
-      [50000, "03  ·  召回路径"],
-      [90000, "04  ·  写入与归档"],
-      [148000, "05  ·  断连降级"],
-      [166000, "06  ·  分层遗忘"],
-      [186000, "07  ·  失败语义"]
+      [6000, "01  ·  拓扑与 MQTT"],
+      [18000, "02  ·  五块记忆"],
+      [38000, "03  ·  召回路径"],
+      [72000, "04  ·  写入与归档"],
+      [122000, "05  ·  断连降级"],
+      [140000, "06  ·  分层遗忘"],
+      [156000, "07  ·  失败语义"]
     ];
     const IND = [
       { t: 0, x: 700, y: 430, w: 520, h: 220, r: 0 },
-      { t: 7500, x: 32, y: 12, w: 1856, h: 1056, r: 1 },
-      { t: 14000, x: 848, y: 456, w: 224, h: 150, r: 1 },
-      { t: 22000, x: 72, y: 96, w: 772, h: 212, r: 1 },
-      { t: 27000, x: 72, y: 300, w: 772, h: 224, r: 1 },
-      { t: 32000, x: 72, y: 516, w: 772, h: 524, r: 1 },
-      { t: 36000, x: 1076, y: 96, w: 772, h: 292, r: 1 },
-      { t: 43000, x: 1076, y: 380, w: 772, h: 660, r: 1 },
-      { t: 50000, x: 72, y: 96, w: 772, h: 212, r: 1 },
-      { t: 68000, x: 72, y: 300, w: 772, h: 224, r: 1 },
-      { t: 76000, x: 848, y: 456, w: 224, h: 150, r: 1 },
-      { t: 82000, x: 1076, y: 96, w: 772, h: 944, r: 1 },
-      { t: 90000, x: 72, y: 300, w: 772, h: 224, r: 1 },
-      { t: 104000, x: 848, y: 456, w: 224, h: 150, r: 1 },
-      { t: 118000, x: 1076, y: 96, w: 772, h: 944, r: 1 },
-      { t: 132000, x: 72, y: 96, w: 772, h: 212, r: 1 },
-      { t: 140000, x: 72, y: 516, w: 772, h: 524, r: 1 },
-      { t: 148000, x: 848, y: 456, w: 224, h: 170, r: 1 },
-      { t: 156000, x: 72, y: 96, w: 772, h: 428, r: 1 },
-      { t: 166000, x: 1076, y: 380, w: 772, h: 660, r: 1 },
-      { t: 186000, x: 868, y: 440, w: 184, h: 188, r: 1 },
-      { t: 198000, x: 700, y: 430, w: 520, h: 220, r: 0 }
+      { t: 6000, x: 32, y: 12, w: 1856, h: 1056, r: 1 },
+      { t: 12000, x: 848, y: 456, w: 224, h: 150, r: 1 },
+      { t: 18000, x: 72, y: 96, w: 772, h: 212, r: 1 },
+      { t: 21500, x: 72, y: 300, w: 772, h: 224, r: 1 },
+      { t: 25000, x: 72, y: 516, w: 772, h: 524, r: 1 },
+      { t: 28000, x: 1076, y: 96, w: 772, h: 292, r: 1 },
+      { t: 33000, x: 1076, y: 380, w: 772, h: 660, r: 1 },
+      { t: 38000, x: 72, y: 96, w: 772, h: 212, r: 1 },
+      { t: 50000, x: 72, y: 300, w: 772, h: 224, r: 1 },
+      { t: 56000, x: 848, y: 456, w: 224, h: 150, r: 1 },
+      { t: 62000, x: 1076, y: 96, w: 772, h: 292, r: 1 },
+      { t: 67000, x: 1076, y: 380, w: 772, h: 660, r: 1 },
+      { t: 72000, x: 72, y: 300, w: 772, h: 224, r: 1 },
+      { t: 84000, x: 848, y: 456, w: 224, h: 150, r: 1 },
+      { t: 94000, x: 1076, y: 96, w: 772, h: 944, r: 1 },
+      { t: 106000, x: 72, y: 96, w: 772, h: 212, r: 1 },
+      { t: 112000, x: 72, y: 516, w: 772, h: 524, r: 1 },
+      { t: 122000, x: 848, y: 456, w: 224, h: 170, r: 1 },
+      { t: 128000, x: 72, y: 96, w: 772, h: 428, r: 1 },
+      { t: 140000, x: 1076, y: 380, w: 772, h: 660, r: 1 },
+      { t: 156000, x: 868, y: 440, w: 184, h: 188, r: 1 },
+      { t: 164000, x: 700, y: 430, w: 520, h: 220, r: 0 }
     ];
     const $ = (id) => document.getElementById(id);
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -402,7 +405,7 @@
 
     function capAt(t) {
       for (const row of CAPS) if (t >= row[0] && t < row[1]) return row[2];
-      return CAPS[CAPS.length - 1][2];
+      return "";
     }
     function chapAt(t) {
       let s = CHAPS[0][1];
@@ -437,21 +440,21 @@
     function render(t) {
       $("cam").removeAttribute("transform");
 
-      const titleOn = windowed(t, 0, 8200, 600) + windowed(t, 196000, 205000, 700);
+      const titleOn = windowed(t, 0, 6500, 500) + windowed(t, 164000, 170000, 600);
       setOp($("title"), Math.min(1, titleOn));
-      setOp($("title-sub"), windowed(t, 900, 8200, 500));
+      setOp($("title-sub"), windowed(t, 700, 6500, 400));
       const line = $("title-line");
-      line.setAttribute("d", `M740 546h${440 * tween(t, 400, 2200)}`);
+      line.setAttribute("d", `M740 546h${440 * tween(t, 300, 1800)}`);
 
-      const topo = appear(t, 8200, 11200);
+      const topo = appear(t, 6500, 9200);
       setOp($("edge-box"), topo);
-      setOp($("cloud-box"), appear(t, 9400, 12400));
-      const mqttUp = appear(t, 12600, 15800) * (1 - appear(t, 148000, 151000));
-      setOp($("mqtt"), mqttUp * (t < 196000 ? 1 : 0));
-      setOp($("mqtt-cut"), windowed(t, 148000, 166000, 400));
+      setOp($("cloud-box"), appear(t, 7600, 10200));
+      const mqttUp = appear(t, 10200, 12800) * (1 - appear(t, 122000, 125000));
+      setOp($("mqtt"), mqttUp * (t < 164000 ? 1 : 0));
+      setOp($("mqtt-cut"), windowed(t, 122000, 140000, 400));
 
       const pk = pkts.children;
-      const flow = mqttUp > 0.5 && t < 148000;
+      const flow = mqttUp > 0.5 && t < 122000;
       setOp(pkts, flow ? 1 : 0);
       if (flow) {
         for (let i = 0; i < pk.length; i++) {
@@ -461,26 +464,27 @@
         }
       }
 
-      const shown = t >= 7000 && t < 196000;
+      const shown = t >= 6000 && t < 164000;
       const f = (
-        t < 22000 ? "topo" :
-        t < 26500 ? "pref" :
-        t < 31500 ? "short" :
-        t < 36000 ? "inner" :
-        t < 42000 ? "cache" :
-        t < 50000 ? "long" :
-        t < 68000 ? "pref" :
-        t < 76000 ? "short" :
-        t < 82000 ? "mqtt" :
-        t < 90000 ? "cloud" :
-        t < 104000 ? "short" :
-        t < 118000 ? "mqtt" :
-        t < 132000 ? "cloud" :
-        t < 140000 ? "pref" :
-        t < 148000 ? "inner" :
-        t < 154000 ? "mqtt" :
-        t < 166000 ? "edge" :
-        t < 186000 ? "long" :
+        t < 18000 ? "topo" :
+        t < 21500 ? "pref" :
+        t < 25000 ? "short" :
+        t < 28000 ? "inner" :
+        t < 33000 ? "cache" :
+        t < 38000 ? "long" :
+        t < 50000 ? "pref" :
+        t < 56000 ? "short" :
+        t < 62000 ? "mqtt" :
+        t < 67000 ? "cache" :
+        t < 72000 ? "long" :
+        t < 84000 ? "short" :
+        t < 94000 ? "mqtt" :
+        t < 106000 ? "cloud" :
+        t < 112000 ? "pref" :
+        t < 122000 ? "inner" :
+        t < 128000 ? "mqtt" :
+        t < 140000 ? "edge" :
+        t < 156000 ? "long" :
         "fail"
       );
       const lit = (name) => f === "topo" || f === name || (f === "cloud" && (name === "cache" || name === "long")) || (f === "edge" && (name === "pref" || name === "short" || name === "inner"));
@@ -488,16 +492,16 @@
         if (!on) { setOp(el, 0); return; }
         setOp(el, lit(name) || f === "topo" ? 1 : 0.38);
       }
-      vis($("m-pref"), shown && t >= 22000, "pref");
-      vis($("m-short"), shown && t >= 26500, "short");
-      vis($("m-inner"), shown && t >= 31500, "inner");
-      vis($("m-cache"), shown && t >= 36000, "cache");
-      vis($("m-long"), shown && t >= 42000, "long");
+      vis($("m-pref"), shown && t >= 18000, "pref");
+      vis($("m-short"), shown && t >= 21500, "short");
+      vis($("m-inner"), shown && t >= 25000, "inner");
+      vis($("m-cache"), shown && t >= 28000, "cache");
+      vis($("m-long"), shown && t >= 33000, "long");
       setOp($("edge-box"), shown ? 1 : 0);
       setOp($("cloud-box"), shown ? (f === "edge" ? 0.2 : 1) : 0);
-      if (t < 12400) {
+      if (t < 10200) {
         setOp($("edge-box"), topo);
-        setOp($("cloud-box"), appear(t, 9400, 12400));
+        setOp($("cloud-box"), appear(t, 7600, 10200));
       }
       if (f === "topo") {
         setOp($("m-pref"), 0);
@@ -513,23 +517,30 @@
       box.setAttribute("y", ind.y);
       box.setAttribute("width", ind.w);
       box.setAttribute("height", ind.h);
-      setOp(box, ind.r * (t > 7000 && t < 196000 ? 1 : 0));
+      setOp(box, ind.r * (t > 6000 && t < 164000 ? 1 : 0));
 
       const fill = $("short-fill");
       const cap = $("short-cap");
-      if (t >= 90000 && t < 118000) {
-        const w = lerp(56, 500, clamp((t - 90000) / 12000, 0, 1));
+      if (t >= 72000 && t < 94000) {
+        const w = lerp(56, 500, clamp((t - 72000) / 10000, 0, 1));
         fill.setAttribute("width", String(w));
         cap.textContent = "容量";
-        cap.setAttribute("fill", t > 100000 ? "#ffe566" : "#8d877c");
-      } else if (t >= 118000 && t < 130000) {
-        fill.setAttribute("width", String(lerp(500, 0, clamp((t - 118000) / 900, 0, 1))));
+        cap.setAttribute("fill", t > 82000 ? "#ffe566" : "#8d877c");
+      } else if (t >= 94000 && t < 106000) {
+        fill.setAttribute("width", String(lerp(500, 0, clamp((t - 94000) / 800, 0, 1))));
         cap.textContent = "容量";
         cap.setAttribute("fill", "#fc6255");
-      } else if (t >= 148000 && t < 160000) {
-        fill.setAttribute("width", String(lerp(500, 280, clamp((t - 152000) / 2000, 0, 1))));
+      } else if (t >= 122000 && t < 140000) {
+        const capW = 500;
+        const overW = 620;
+        let w = capW;
+        if (t < 125500) w = capW;
+        else if (t < 128500) w = lerp(capW, overW, clamp((t - 125500) / 1800, 0, 1));
+        else if (t < 133000) w = lerp(overW, capW, clamp((t - 128500) / 2200, 0, 1));
+        else w = capW;
+        fill.setAttribute("width", String(w));
         cap.textContent = "容量";
-        cap.setAttribute("fill", "#fc6255");
+        cap.setAttribute("fill", w > capW + 0.5 ? "#fc6255" : "#ffe566");
       } else {
         fill.setAttribute("width", "120");
         cap.textContent = "容量";
@@ -537,14 +548,14 @@
       }
 
       const tok = $("token");
-      if (t >= 68000 && t < 90000) {
+      if (t >= 50000 && t < 72000) {
         setOp(tok, 1);
-        const u = (t - 68000) / 22000;
+        const u = (t - 50000) / 22000;
         let p;
-        if (u < 0.22) p = along(458, 412, 868, 530, u / 0.22);
-        else if (u < 0.4) p = along(868, 530, 1052, 530, (u - 0.22) / 0.18);
-        else if (u < 0.65) p = along(1052, 530, 1462, 242, (u - 0.4) / 0.25);
-        else p = along(1462, 242, 1462, 710, (u - 0.65) / 0.35);
+        if (u < 0.28) p = along(458, 412, 868, 530, u / 0.28);
+        else if (u < 0.48) p = along(868, 530, 1052, 530, (u - 0.28) / 0.20);
+        else if (u < 0.72) p = along(1052, 530, 1462, 242, (u - 0.48) / 0.24);
+        else p = along(1462, 242, 1462, 710, (u - 0.72) / 0.28);
         tok.setAttribute("transform", `translate(${p[0]} ${p[1]})`);
       } else setOp(tok, 0);
 
@@ -552,30 +563,36 @@
       const ends = [[1488, 296], [1588, 296], [1462, 600], [1462, 740]];
       noteData.forEach((el, i) => {
         let x = starts[i][0], y = starts[i][1], o = 0, sc = 1;
-        if (t >= 92000 && t < 106000) {
-          o = windowed(t, 92000 + i * 160, 106000, 200);
+        if (t >= 74000 && t < 86000) {
+          o = windowed(t, 74000 + i * 140, 86000, 180);
           x = 280 + i * 70; y = 460;
-        } else if (t >= 106000 && t < 122000) {
+        } else if (t >= 86000 && t < 100000) {
           o = 1;
-          const u = clamp((t - 106000 - i * 180) / 1400, 0, 1);
+          const u = clamp((t - 86000 - i * 140) / 1200, 0, 1);
           const p = along(280 + i * 70, 460, ends[i][0], ends[i][1], u);
           x = p[0]; y = p[1];
-        } else if (t >= 122000 && t < 128000) {
-          o = 1 - clamp((t - 122000 - i * 80) / 400, 0, 1);
+        } else if (t >= 100000 && t < 106000) {
+          o = 1 - clamp((t - 100000 - i * 70) / 360, 0, 1);
           x = ends[i][0]; y = ends[i][1]; sc = 0.85 + 0.15 * o;
-        } else if (t >= 150000 && t < 160000) {
+        } else if (t >= 122000 && t < 140000) {
           const grid = [[220, 460], [310, 460], [400, 460], [490, 460]];
           x = grid[i][0]; y = grid[i][1];
-          o = 1 - clamp((t - 152000 - [0, 280, 640, 980][i]) / 280, 0, 1);
+          if (t < 125500) {
+            o = i < 2 ? 1 : 0;
+          } else if (t < 128500) {
+            o = i < 2 ? 1 : tween(t, 125500 + (i - 2) * 220, 127200 + (i - 2) * 220);
+          } else {
+            o = i < 2 ? 1 : 1 - clamp((t - 128500 - (i - 2) * 180) / 320, 0, 1);
+          }
         }
         el.style.opacity = String(clamp(o, 0, 1));
         el.setAttribute("transform", `translate(${x} ${y}) scale(${sc})`);
       });
 
       const samp = $("sample");
-      if (t >= 132000 && t < 144000) {
+      if (t >= 112000 && t < 120000) {
         setOp(samp, 1);
-        const u = clamp((t - 132000) / 1800, 0, 1);
+        const u = clamp((t - 112000) / 1400, 0, 1);
         let p;
         if (u < 0.4) p = along(1462, 710, 960, 530, u / 0.4);
         else if (u < 0.7) p = along(960, 530, 960, 780, (u - 0.4) / 0.3);
@@ -584,9 +601,9 @@
       } else setOp(samp, 0);
 
       const snap = $("snap");
-      if (t >= 140000 && t < 148000) {
+      if (t >= 112000 && t < 122000) {
         setOp(snap, 1);
-        const u = clamp((t - 140000) / 1600, 0, 1);
+        const u = clamp((t - 112000) / 1400, 0, 1);
         let p;
         if (u < 0.55) p = along(960, 160, 960, 800, u / 0.55);
         else p = along(960, 800, 588, 888, (u - 0.55) / 0.45);
@@ -595,14 +612,14 @@
 
       ["tier0", "tier1", "tier3"].forEach((id, i) => {
         const el = $(id);
-        const on = appear(t, 42000 + i * 180, 44800 + i * 180) * (1 - appear(t, 196000, 199000));
+        const on = appear(t, 33000 + i * 160, 35200 + i * 160) * (1 - appear(t, 164000, 167000));
         let fade = 1;
-        if (id === "tier3" && t >= 178000 && t < 196000) fade = 0.32;
+        if (id === "tier3" && t >= 148000 && t < 164000) fade = 0.32;
         el.style.opacity = String(on * fade);
       });
 
-      setOp($("fail"), windowed(t, 186500, 196000, 400));
-      setOp($("grid"), t > 7000 && t < 196000 ? 0.18 : 0.08);
+      setOp($("fail"), windowed(t, 156500, 164000, 360));
+      setOp($("grid"), t > 6000 && t < 164000 ? 0.18 : 0.08);
 
       $("caption").innerHTML = capAt(t);
       $("chapter").textContent = chapAt(t);
