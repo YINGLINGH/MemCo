@@ -14,8 +14,8 @@ MQTT is optional: `pip install -e ".[mqtt]"`
 
 | Name | Default | Special |
 | --- | --- | --- |
-| `long_cap` | 200 | `-1` no cap, no forget |
-| `short_cap` | 20 | `-1` no cap, no upload |
+| `long_cap` | 1000 | `-1` no cap, no forget |
+| `short_cap` | 50 | `-1` no cap, no upload |
 | `recall_boost` | 1 | `0` no boost |
 | `cache_ttl` | 86400 | `-1` no expiry |
 | `cache_cap` | 1024 | `-1` no cap |

@@ -21,8 +21,8 @@ def try_limit(retries: int) -> int | None:
 
 @dataclass
 class MemoryConfig:
-    long_cap: int = 200
-    short_cap: int = 20
+    long_cap: int = 1000
+    short_cap: int = 50
     recall_boost: int = 1
     cache_ttl: int = 86400
     cache_cap: int = 1024
