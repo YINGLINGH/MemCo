@@ -68,24 +68,25 @@ class Cloud:
         mark = self.seen / key
         if mark.is_file():
             return []
+        extra = payload.get("sources")
+        if isinstance(extra, dict):
+            for text in extra.values():
+                self.store.write_source(str(text or ""))
         source = str(payload.get("source") or payload.get("source_text") or "")
         if source:
             self.store.write_source(source)
         raw = payload.get("buckets") or []
         buckets = [Bucket.from_dict(item) for item in raw]
+        wrote = False
         for bucket in buckets:
             self.store.write(bucket)
-            try:
-                self.cache.set_item(self.cfg.user_id, bucket.stamp, bucket.keyword, json.dumps(bucket.to_dict(), ensure_ascii=False))
-            except Exception:
-                pass
+            wrote = True
             try:
                 ok = self.index.add(bucket.keyword, bucket.body)
                 if ok is False:
                     dispatch(self.vec_fail, "vec.down", {"keyword": bucket.keyword})
             except Exception:
                 dispatch(self.vec_fail, "vec.down", {"keyword": bucket.keyword})
-        before = {b.id: b for b in self.store.list_live()}
         dropped = forget_if_at_cap(
             self.store,
             self.cfg.long_cap,
@@ -93,17 +94,14 @@ class Cloud:
             self.cfg.forget_pct,
             self.cfg.tier_pcts,
         )
-        for bucket_id in dropped:
-            gone = before.get(bucket_id)
-            if gone is None:
-                continue
-            try:
-                self.cache.delete_item(self.cfg.user_id, gone.stamp, gone.keyword)
-            except Exception:
-                pass
         if dropped:
             try:
                 self.index.rebuild(self.store.list_live())
+            except Exception:
+                pass
+        if wrote or dropped:
+            try:
+                self.cache.clear()
             except Exception:
                 pass
         self.store.gc_sources()

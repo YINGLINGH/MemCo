@@ -8,7 +8,7 @@ from memco.builtin import HashIndex, MemCache, SimpleTok, TemplateTeacher
 from memco.bus import InprocBus, pack_parts, take_part
 from memco.cloud import Cloud
 from memco.config import UNLIMITED, MemoryConfig, at_cap, try_limit
-from memco.digest import Turn
+from memco.digest import Turn, digest
 from memco.edge import Edge
 from memco.forget import forget_if_at_cap, plan_forget
 from memco.prefs import EMPTY_SELF, EMPTY_USER, bullets, has_pref, lookup, section
@@ -346,9 +346,14 @@ def test_cache_keeps_kind(tmp_path: Path) -> None:
     live = cloud.store.list_live()
     assert live
     stamp = live[0].stamp
+    first, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, "", stamp)
+    assert first.source == "db-time"
+    assert first.hits
+    assert "promise" in first.hits[0]
+    assert "sure" in first.hits[0]
     result, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, "", stamp)
     assert result.source == "cache-time"
-    assert result.hits
+    assert result.hits == first.hits
     assert "promise" in result.hits[0]
 
 
@@ -406,3 +411,116 @@ def test_archive_redelivery_is_idempotent(tmp_path: Path) -> None:
     assert len(cloud.index.keys) == n_index
     again = [ln for ln in cloud.distill_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
     assert again == lines
+
+
+def test_cache_clear_drops_all() -> None:
+    cache = MemCache(cap=8, ttl=UNLIMITED, fill=1.0, policy="lru")
+    cache.set_item("u", "t", "k", "alpha")
+    cache.clear()
+    assert cache.get_by_time("u", "t") is None
+    assert cache.get_by_keyword("u", "k") is None
+
+
+def test_result_cache_hit_boosts_ltm(tmp_path: Path) -> None:
+    edge, cloud, _bus = _pair(tmp_path, short_cap=1)
+    edge.add(Turn("the lamp broke", "noted", unresolved=True))
+    edge.end_session()
+    kw = cloud.store.list_live()[0].keyword
+    first, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, kw, None)
+    assert first.source == "db-kw-vec"
+    before = {b.id: b.weight for b in cloud.store.list_live()}
+    hit, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, kw, None)
+    assert hit.source == "cache-kw"
+    assert hit.hits == first.hits
+    after = {b.id: b.weight for b in cloud.store.list_live()}
+    assert any(after[i] > before[i] for i in before)
+
+
+def test_ingest_clears_result_cache(tmp_path: Path) -> None:
+    edge, cloud, _bus = _pair(tmp_path, short_cap=1)
+    edge.add(Turn("the lamp broke", "noted", unresolved=True))
+    edge.end_session()
+    kw = next(b.keyword for b in cloud.store.list_live() if b.kind == "event")
+    miss, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, kw, None)
+    assert miss.source == "db-kw-vec"
+    hit, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, kw, None)
+    assert hit.source == "cache-kw"
+    edge.add(Turn("keep this tea", "ok", unresolved=True))
+    edge.end_session()
+    again, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, kw, None)
+    assert again.source == "db-kw-vec"
+
+
+def test_forget_clears_result_cache(tmp_path: Path) -> None:
+    edge, cloud, _bus = _pair(tmp_path, short_cap=1, long_cap=5)
+    edge.add(Turn("the lamp broke", "noted", unresolved=True))
+    edge.end_session()
+    kw = cloud.store.list_live()[0].keyword
+    cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, kw, None)
+    hit, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, kw, None)
+    assert hit.source == "cache-kw"
+    for i in range(12):
+        edge.add(Turn(f"note {i} about tea{i}", "ok", unresolved=True))
+        edge.end_session()
+    again, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, kw, None)
+    assert again.source != "cache-kw"
+
+
+def test_cache_key_includes_keyword(tmp_path: Path) -> None:
+    edge, cloud, _bus = _pair(tmp_path, short_cap=1)
+    edge.add(Turn("the lamp broke", "noted"))
+    edge.add(Turn("remind me to buy milk", "sure", kind="commitment", unresolved=True))
+    edge.end_session()
+    stamp = cloud.store.list_live()[0].stamp
+    event = next(b for b in cloud.store.list_live() if b.kind == "event")
+    promise = next(b for b in cloud.store.list_live() if b.kind == "commitment")
+    first, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, promise.keyword, stamp)
+    assert first.source == "db-time"
+    second, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, event.keyword, stamp)
+    assert second.source == "db-time"
+    third, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, event.keyword, stamp)
+    assert third.source == "cache-time"
+
+
+def test_multi_session_upload_keeps_sources(tmp_path: Path) -> None:
+    edge, cloud, _bus = _pair(tmp_path, short_cap=2)
+    edge.add(Turn("the lamp broke", "I will check it"))
+    edge.end_session()
+    edge.add(Turn("the kettle hissed", "I heard it"))
+    edge.end_session()
+    live = [b for b in cloud.store.list_live() if b.kind == "event"]
+    assert len(live) == 2
+    for bucket in live:
+        assert cloud.store.read_source(bucket.source_sha256)
+    kettle = next(b for b in live if "kettle" in b.body)
+    result, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, kettle.keyword, None)
+    blob = "\n".join(result.hits)
+    assert "heard" in blob
+    assert "check" not in blob
+
+
+def test_commitment_body_keeps_agent() -> None:
+    pack = digest([Turn("remind me to buy milk", "sure", kind="commitment", unresolved=True)], SimpleTok())
+    body = next(b.body for b in pack.buckets if b.kind == "commitment")
+    assert "milk" in body
+    assert "sure" in body
+
+
+def test_feeling_body_is_user_only() -> None:
+    pack = digest([Turn("I felt tired", "please rest", kind="feeling", high_emotion=True)], SimpleTok())
+    feeling = next(b for b in pack.buckets if b.kind == "feeling")
+    assert "tired" in feeling.body
+    assert "rest" not in feeling.body
+    assert "please" not in feeling.line()
+
+
+def test_event_recall_adds_source_excerpt(tmp_path: Path) -> None:
+    edge, cloud, _bus = _pair(tmp_path, short_cap=1)
+    edge.add(Turn("the lamp broke", "I will check it"))
+    edge.end_session()
+    event = next(b for b in cloud.store.list_live() if b.kind == "event")
+    result, _ = cloud_recall(cloud.cache, cloud.index, cloud.store, cloud.cfg, event.keyword, None)
+    blob = "\n".join(result.hits)
+    assert "- user:" in blob
+    assert "- agent:" in blob
+    assert "check" in blob

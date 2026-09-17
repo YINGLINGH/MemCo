@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MemCo · 端云记忆</title>
+  <style>
+    :root {
+      --bg: #07080c;
+      --ink: #efeae2;
+      --mute: #8d877c;
+      --gold: #ffe566;
+      --blue: #58c4dd;
+      --teal: #5cd0b3;
+      --red: #fc6255;
+      --green: #83c167;
+      --pink: #e07a9a;
+      --line: #2a2d36;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+      overflow: hidden;
+    }
+    .stage {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .frame {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      padding: 12px 24px 0;
+    }
+    svg.scene {
+      width: min(100%, calc((100vh - 176px) * 16 / 9));
+      max-height: calc(100vh - 176px);
+      display: block;
+    }
+    .caption-wrap {
+      height: 108px;
+      display: grid;
+      place-items: center;
+      padding: 0 48px;
+    }
+    .caption {
+      max-width: 1280px;
+      text-align: center;
+      font-size: 30px;
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      line-height: 1.65;
+      word-break: keep-all;
+      line-break: strict;
+      text-wrap: pretty;
+      color: var(--ink);
+      min-height: 2.4em;
+    }
+    .caption em {
+      color: var(--gold);
+      font-style: normal;
+      font-weight: 500;
+    }
+    .player {
+      height: 56px;
+      display: grid;
+      grid-template-columns: auto auto 1fr auto auto;
+      gap: 16px;
+      align-items: center;
+      padding: 0 28px 14px;
+    }
+    button.ctl {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid #3a3d46;
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+    button.ctl:hover { border-color: var(--gold); }
+    button.ctl svg { width: 14px; height: 14px; }
+    .bar {
+      position: relative;
+      height: 3px;
+      background: #22252d;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .bar > i {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0;
+      background: var(--gold);
+      border-radius: 2px;
+    }
+    .bar > b {
+      position: absolute;
+      top: 50%;
+      width: 9px;
+      height: 9px;
+      margin: -4.5px 0 0 -4.5px;
+      background: var(--gold);
+      border-radius: 50%;
+    }
+    .time {
+      font-size: 28px;
+      letter-spacing: 0.1em;
+      color: var(--mute);
+      font-variant-numeric: tabular-nums;
+      min-width: 168px;
+      text-align: right;
+    }
+    .chapter {
+      font-size: 28px;
+      letter-spacing: 0.14em;
+      color: var(--mute);
+      white-space: nowrap;
+      min-width: 12em;
+    }
+    .ghost { opacity: 0; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="frame">
+      <svg class="scene" viewBox="0 0 1920 1080" fill="none">
+        <defs>
+          <radialGradient id="vignette" cx="50%" cy="48%" r="62%">
+            <stop offset="0%" stop-color="#0c0e14"/>
+            <stop offset="100%" stop-color="#05060a"/>
+          </radialGradient>
+          <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="4" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect width="1920" height="1080" fill="url(#vignette)"/>
+        <g id="grid" opacity="0.22" stroke="#2c3038" stroke-width="1">
+          <path d="M48 28h32M48 28v32M1872 28h-32M1872 28v32M48 1052h32M48 1052v-32M1872 1052h-32M1872 1052v-32"/>
+        </g>
+
+        <g id="cam">
+          <g id="topo">
+            <g id="edge-box">
+              <rect x="48" y="28" width="820" height="1024" rx="36" fill="#0a0d13" stroke="#58c4dd" stroke-width="1.35"/>
+              <text x="458" y="78" text-anchor="middle" fill="#58c4dd" font-size="32" letter-spacing="14">端侧</text>
+            </g>
+            <g id="cloud-box">
+              <rect x="1052" y="28" width="820" height="1024" rx="36" fill="#0a0d13" stroke="#5cd0b3" stroke-width="1.35"/>
+              <text x="1462" y="78" text-anchor="middle" fill="#5cd0b3" font-size="32" letter-spacing="14">云侧</text>
+            </g>
+
+            <g id="mqtt">
+              <path id="mqtt-line" d="M868 530h184" stroke="#ffe566" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="868" cy="530" r="4.5" fill="#ffe566"/>
+              <circle cx="1052" cy="530" r="4.5" fill="#ffe566"/>
+              <text x="960" y="488" text-anchor="middle" fill="#ffe566" font-size="28" letter-spacing="5">MQTT</text>
+              <text x="960" y="576" text-anchor="middle" fill="#8d877c" font-size="28" letter-spacing="4">QoS</text>
+              <g id="pkts" fill="#ffe566"></g>
+            </g>
+            <g id="mqtt-cut">
+              <path d="M868 530h70" stroke="#fc6255" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M982 530h70" stroke="#fc6255" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M948 510l24 40" stroke="#fc6255" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M972 510l-24 40" stroke="#fc6255" stroke-width="1.6" stroke-linecap="round"/>
+              <text x="960" y="612" text-anchor="middle" fill="#fc6255" font-size="28" letter-spacing="3">MQTT 断连</text>
+            </g>
+          </g>
+
+          <g id="mods">
+            <g id="m-pref" transform="translate(84,108)">
+              <rect width="748" height="188" rx="22" fill="#0c1018" stroke="#58c4dd" stroke-width="1.25"/>
+              <text x="40" y="62" fill="#f4efe6" font-size="36" font-weight="300">偏好</text>
+              <text x="40" y="108" fill="#8d877c" font-size="28">T0 · 本地召回</text>
+              <path d="M40 148h188" stroke="#58c4dd" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+              <path d="M40 168h108" stroke="#3a3d46" stroke-width="4" stroke-linecap="round"/>
+              <image href="assets/ico-pref.png" x="612" y="28" width="112" height="112"/>
+            </g>
+            <g id="m-short" transform="translate(84,312)">
+              <rect width="748" height="200" rx="22" fill="#0c1018" stroke="#58c4dd" stroke-width="1.25"/>
+              <text x="40" y="62" fill="#f4efe6" font-size="36" font-weight="300">短期记忆</text>
+              <text x="40" y="108" fill="#8d877c" font-size="28">达容量后经 MQTT 上传</text>
+              <rect x="40" y="148" width="500" height="14" rx="7" fill="#242830"/>
+              <rect id="short-fill" x="40" y="148" width="0" height="14" rx="7" fill="#ffe566"/>
+              <text id="short-cap" x="560" y="162" fill="#8d877c" font-size="28">容量</text>
+              <image href="assets/ico-stm.png" x="636" y="24" width="88" height="88"/>
+            </g>
+            <g id="m-inner" transform="translate(84,528)">
+              <rect width="748" height="500" rx="22" fill="#0c1018" stroke="#e07a9a" stroke-width="1.25"/>
+              <text x="40" y="62" fill="#f4efe6" font-size="36" font-weight="300">内化记忆</text>
+              <text x="40" y="108" fill="#8d877c" font-size="28">系统外训练 · 快照加载</text>
+              <image href="assets/ico-inner.png" x="28" y="140" width="188" height="188"/>
+              <text x="236" y="228" fill="#f4efe6" font-size="28">稀缺样本蒸馏</text>
+              <text x="236" y="272" fill="#8d877c" font-size="28">训练在系统外完成</text>
+              <image href="assets/ico-distill.png" x="236" y="312" width="96" height="96"/>
+              <text x="284" y="444" text-anchor="middle" fill="#e07a9a" font-size="28">蒸馏样本</text>
+              <image href="assets/ico-snap.png" x="456" y="312" width="96" height="96"/>
+              <text x="504" y="444" text-anchor="middle" fill="#e07a9a" font-size="28">快照</text>
+            </g>
+
+            <g id="m-cache" transform="translate(1088,108)">
+              <rect width="748" height="268" rx="22" fill="#0c1018" stroke="#5cd0b3" stroke-width="1.25"/>
+              <text x="40" y="62" fill="#f4efe6" font-size="36" font-weight="300">记忆缓存</text>
+              <text x="40" y="108" fill="#8d877c" font-size="28">关键词 / 时间 · 缓存策略</text>
+              <image href="assets/ico-cache.png" x="612" y="20" width="112" height="112"/>
+              <g id="cache-slots">
+                <image href="assets/ico-note.png" x="28" y="140" width="96" height="96" opacity="0.95"/>
+                <image href="assets/ico-note.png" x="132" y="152" width="72" height="72" opacity="0.55"/>
+                <image href="assets/ico-note.png" x="216" y="164" width="52" height="52" opacity="0.28"/>
+                <text x="292" y="204" fill="#5cd0b3" font-size="32" letter-spacing="8">···</text>
+              </g>
+            </g>
+            <g id="m-long" transform="translate(1088,392)">
+              <rect width="748" height="636" rx="22" fill="#0c1018" stroke="#5cd0b3" stroke-width="1.25"/>
+              <text x="40" y="62" fill="#f4efe6" font-size="36" font-weight="300">长期记忆</text>
+              <text x="40" y="108" fill="#8d877c" font-size="28">权重 · 语义检索 · 分层遗忘</text>
+              <image href="assets/ico-ltm.png" x="628" y="24" width="96" height="96"/>
+              <g id="tiers">
+                <g id="tier0" transform="translate(40,148)">
+                  <rect width="268" height="430" rx="18" fill="#10151c" stroke="#ffe566" stroke-width="1.35"/>
+                  <text x="134" y="72" text-anchor="middle" fill="#f4efe6" font-size="32" font-weight="300">高权重</text>
+                  <text x="134" y="118" text-anchor="middle" fill="#8d877c" font-size="28">少遗忘</text>
+                  <path d="M56 176h152" stroke="#ffe566" stroke-width="12" stroke-linecap="round" opacity="0.92"/>
+                  <path d="M56 220h152" stroke="#ffe566" stroke-width="12" stroke-linecap="round" opacity="0.7"/>
+                  <path d="M56 264h152" stroke="#ffe566" stroke-width="12" stroke-linecap="round" opacity="0.46"/>
+                  <path d="M56 308h152" stroke="#ffe566" stroke-width="12" stroke-linecap="round" opacity="0.22"/>
+                </g>
+                <text id="tier1" x="374" y="372" text-anchor="middle" fill="#8d877c" font-size="36" letter-spacing="10">···</text>
+                <g id="tier3" transform="translate(440,148)">
+                  <rect width="268" height="430" rx="18" fill="#10151c" stroke="#fc6255" stroke-width="1.35"/>
+                  <text x="134" y="72" text-anchor="middle" fill="#f4efe6" font-size="32" font-weight="300">低权重</text>
+                  <text x="134" y="118" text-anchor="middle" fill="#8d877c" font-size="28">多遗忘</text>
+                  <path d="M56 264h152" stroke="#fc6255" stroke-width="12" stroke-linecap="round" opacity="0.28"/>
+                </g>
+              </g>
+            </g>
+          </g>
+
+          <rect id="indicate" x="0" y="0" width="0" height="0" rx="26" stroke="#ffe566" stroke-width="1.7" fill="none" filter="url(#glow)"/>
+
+          <g id="notes">
+            <g id="n0"><image href="assets/ico-note.png" x="-28" y="-28" width="56" height="56"/></g>
+            <g id="n1"><image href="assets/ico-note.png" x="-24" y="-24" width="48" height="48" opacity="0.85"/></g>
+            <g id="n2"><image href="assets/ico-note.png" x="-22" y="-22" width="44" height="44" opacity="0.7"/></g>
+            <g id="n3"><image href="assets/ico-note.png" x="-20" y="-20" width="40" height="40" opacity="0.55"/></g>
+          </g>
+          <g id="token">
+            <circle r="13" fill="#07080c" stroke="#ffe566" stroke-width="1.6" filter="url(#glow)"/>
+            <circle r="4" fill="#ffe566"/>
+          </g>
+          <g id="sample">
+            <image href="assets/ico-distill.png" x="-36" y="-36" width="72" height="72"/>
+          </g>
+          <g id="snap">
+            <image href="assets/ico-snap.png" x="-36" y="-36" width="72" height="72"/>
+          </g>
+          <g id="fail">
+            <circle cx="960" cy="500" r="44" stroke="#fc6255" stroke-width="1.6" filter="url(#glow)"/>
+            <path d="M938 500h44" stroke="#fc6255" stroke-width="1.7" stroke-linecap="round"/>
+            <rect x="882" y="560" width="156" height="52" rx="26" fill="#0c1018" stroke="#fc6255" stroke-width="1.4"/>
+            <text x="960" y="595" text-anchor="middle" fill="#fc6255" font-size="28">召回为空</text>
+          </g>
+
+          <g id="title">
+            <text x="960" y="498" text-anchor="middle" fill="#f4efe6" font-size="96" font-weight="200" letter-spacing="22">MemCo</text>
+            <path id="title-line" d="M740 546h440" stroke="#ffe566" stroke-width="1.4" filter="url(#glow)"/>
+            <text id="title-sub" x="960" y="612" text-anchor="middle" fill="#8d877c" font-size="28" letter-spacing="14">端云协同记忆系统</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="caption-wrap"><div class="caption" id="caption"></div></div>
+    <div class="player">
+      <div class="chapter" id="chapter"></div>
+      <button class="ctl" id="play" aria-label="播放或暂停">
+        <svg id="ico-pause" viewBox="0 0 16 16" fill="#efeae2"><rect x="3" y="2" width="3.4" height="12" rx="0.5"/><rect x="9.6" y="2" width="3.4" height="12" rx="0.5"/></svg>
+        <svg id="ico-play" viewBox="0 0 16 16" fill="#efeae2" style="display:none"><path d="M4 2.4v11.2L13.2 8z"/></svg>
+      </button>
+      <div class="bar" id="bar"><i id="fill"></i><b id="knob"></b></div>
+      <div class="time" id="clock">00:00 / 03:25</div>
+      <button class="ctl" id="replay" aria-label="重播">
+        <svg viewBox="0 0 16 16" fill="none" stroke="#efeae2" stroke-width="1.5"><path d="M3 8a5 5 0 1 0 1.5-3.6"/><path d="M3 2.4v3.2h3.2"/></svg>
+      </button>
+    </div>
+  </div>
+  <script>
+    const DURATION = 205000;
+    const CAPS = [
+      [0, 7500, "MemCo。一套<em>端云协同</em>的智能体记忆系统。"],
+      [7500, 22000, "记忆分置两端。端侧贴近用户，云侧负责更长期的保存。中间走 <em>MQTT</em>，投递语义由 <em>QoS</em> 约定。"],
+      [22000, 36000, "端侧三块：<em>偏好</em>、<em>短期记忆</em>、<em>内化记忆</em>。偏好始终本地可读。"],
+      [36000, 50000, "云侧两块：<em>记忆缓存</em>与<em>长期记忆</em>。缓存存整组排序结果，遵循<em>缓存策略</em>；长期记忆支持关键词命中与<em>向量检索</em>。"],
+      [50000, 68000, "召回先判断是不是偏好问题。是，则端侧本地完成，<em>不发 MQTT</em>。"],
+      [68000, 90000, "否则顺序为：短期记忆 → MQTT 请求云侧。云侧命中缓存即返回该组排序结果，并对对应长期记忆做 <em>boost</em>；未命中再查长期记忆与向量，再写入整组结果。"],
+      [90000, 104000, "会话结束，这一轮才写入短期记忆。端侧的偏好此时不改写。"],
+      [104000, 126000, "短期记忆达到容量，经 MQTT <em>publish</em> 归档。成功后这批短期记忆在端侧<em>永久删除</em>，避免与长期记忆重复。"],
+      [126000, 148000, "云侧并行：写入长期记忆并清空记忆缓存、总结偏好并 MQTT 回传、蒸馏稀缺样本。内化训练在系统外，MemCo 只<em>加载快照</em>。"],
+      [148000, 166000, "若已达容量却 <em>MQTT 断连</em>：写入之后，端侧对短期记忆等概率随机删除，以维持容量。召回降级为仅偏好与短期记忆。"],
+      [166000, 186000, "长期记忆达到容量后<em>分层遗忘</em>：按权重分成若干档，档内等概率抽取，永久删除，并清理缓存、重建检索。"],
+      [186000, 205000, "<em>MQTT 断连不是失败</em>。只有需要召回且结果为空，才记为<em>失败</em>。"]
+    ];
+    const CHAPS = [
+      [0, "00  ·  引言"],
+      [7500, "01  ·  拓扑与 MQTT"],
+      [22000, "02  ·  五块记忆"],
+      [50000, "03  ·  召回路径"],
+      [90000, "04  ·  写入与归档"],
+      [148000, "05  ·  断连降级"],
+      [166000, "06  ·  分层遗忘"],
+      [186000, "07  ·  失败语义"]
+    ];
+    const IND = [
+      { t: 0, x: 700, y: 430, w: 520, h: 220, r: 0 },
+      { t: 7500, x: 32, y: 12, w: 1856, h: 1056, r: 1 },
+      { t: 14000, x: 848, y: 456, w: 224, h: 150, r: 1 },
+      { t: 22000, x: 72, y: 96, w: 772, h: 212, r: 1 },
+      { t: 27000, x: 72, y: 300, w: 772, h: 224, r: 1 },
+      { t: 32000, x: 72, y: 516, w: 772, h: 524, r: 1 },
+      { t: 36000, x: 1076, y: 96, w: 772, h: 292, r: 1 },
+      { t: 43000, x: 1076, y: 380, w: 772, h: 660, r: 1 },
+      { t: 50000, x: 72, y: 96, w: 772, h: 212, r: 1 },
+      { t: 68000, x: 72, y: 300, w: 772, h: 224, r: 1 },
+      { t: 76000, x: 848, y: 456, w: 224, h: 150, r: 1 },
+      { t: 82000, x: 1076, y: 96, w: 772, h: 944, r: 1 },
+      { t: 90000, x: 72, y: 300, w: 772, h: 224, r: 1 },
+      { t: 104000, x: 848, y: 456, w: 224, h: 150, r: 1 },
+      { t: 118000, x: 1076, y: 96, w: 772, h: 944, r: 1 },
+      { t: 132000, x: 72, y: 96, w: 772, h: 212, r: 1 },
+      { t: 140000, x: 72, y: 516, w: 772, h: 524, r: 1 },
+      { t: 148000, x: 848, y: 456, w: 224, h: 170, r: 1 },
+      { t: 156000, x: 72, y: 96, w: 772, h: 428, r: 1 },
+      { t: 166000, x: 1076, y: 380, w: 772, h: 660, r: 1 },
+      { t: 186000, x: 868, y: 440, w: 184, h: 188, r: 1 },
+      { t: 198000, x: 700, y: 430, w: 520, h: 220, r: 0 }
+    ];
+    const $ = (id) => document.getElementById(id);
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+    function tween(t, a, b) {
+      if (t <= a) return 0;
+      if (t >= b) return 1;
+      return ease((t - a) / (b - a));
+    }
+    function windowed(t, a, b, fade) {
+      fade = fade == null ? 480 : fade;
+      if (t <= a || t >= b) return 0;
+      if (t < a + fade) return tween(t, a, a + fade);
+      if (t > b - fade) return 1 - tween(t, b - fade, b);
+      return 1;
+    }
+    function appear(t, a, b) {
+      return tween(t, a, b);
+    }
+    function op(el, v, scale) {
+      const o = clamp(v, 0, 1);
+      el.style.opacity = String(o);
+      if (scale != null) {
+        const s = lerp(0.94, 1, o);
+        const prev = el.getAttribute("data-tf") || "";
+        el.setAttribute("transform", (prev + " scale(" + lerp(0.96, 1, o) + ")").trim());
+      }
+    }
+    function setOp(el, v) {
+      el.style.opacity = String(clamp(v, 0, 1));
+    }
+
+    ["edge-box","cloud-box","mqtt","mqtt-cut","m-pref","m-short","m-inner","m-cache","m-long","indicate","token","sample","snap","fail","title","title-sub"].forEach((id) => {
+      const el = $(id);
+      if (el) el.style.opacity = "0";
+    });
+    ["tier0","tier1","tier3"].forEach((id) => { $(id).style.opacity = "0"; });
+
+    const pkts = $("pkts");
+    const pktShape = [
+      { w: 8, h: 8, rx: 1.6 },
+      { w: 6, h: 10, rx: 2 },
+      { w: 11, h: 6, rx: 3 }
+    ];
+    for (let i = 0; i < 3; i++) {
+      const c = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      c.setAttribute("width", String(pktShape[i].w));
+      c.setAttribute("height", String(pktShape[i].h));
+      c.setAttribute("rx", String(pktShape[i].rx));
+      c.setAttribute("y", String(530 - pktShape[i].h / 2));
+      pkts.appendChild(c);
+    }
+    const noteData = ["n0", "n1", "n2", "n3"].map((id) => {
+      const el = $(id);
+      el.style.opacity = "0";
+      return el;
+    });
+
+    function capAt(t) {
+      for (const row of CAPS) if (t >= row[0] && t < row[1]) return row[2];
+      return CAPS[CAPS.length - 1][2];
+    }
+    function chapAt(t) {
+      let s = CHAPS[0][1];
+      for (const row of CHAPS) if (t >= row[0]) s = row[1];
+      return s;
+    }
+
+    function indicateAt(t) {
+      let i = 0;
+      while (i + 1 < IND.length && IND[i + 1].t <= t) i++;
+      const a = IND[i];
+      const b = IND[Math.min(i + 1, IND.length - 1)];
+      if (a === b) return a;
+      const dur = Math.min(520, Math.max(1, b.t - a.t));
+      const start = b.t - dur;
+      if (t < start) return a;
+      const u = ease(clamp((t - start) / dur, 0, 1));
+      return {
+        x: lerp(a.x, b.x, u),
+        y: lerp(a.y, b.y, u),
+        w: lerp(a.w, b.w, u),
+        h: lerp(a.h, b.h, u),
+        r: lerp(a.r, b.r, u)
+      };
+    }
+
+    function along(x1, y1, x2, y2, u) {
+      const e = ease(clamp(u, 0, 1));
+      return [lerp(x1, x2, e), lerp(y1, y2, e)];
+    }
+
+    function render(t) {
+      $("cam").removeAttribute("transform");
+
+      const titleOn = windowed(t, 0, 8200, 600) + windowed(t, 196000, 205000, 700);
+      setOp($("title"), Math.min(1, titleOn));
+      setOp($("title-sub"), windowed(t, 900, 8200, 500));
+      const line = $("title-line");
+      line.setAttribute("d", `M740 546h${440 * tween(t, 400, 2200)}`);
+
+      const topo = appear(t, 8200, 11200);
+      setOp($("edge-box"), topo);
+      setOp($("cloud-box"), appear(t, 9400, 12400));
+      const mqttUp = appear(t, 12600, 15800) * (1 - appear(t, 148000, 151000));
+      setOp($("mqtt"), mqttUp * (t < 196000 ? 1 : 0));
+      setOp($("mqtt-cut"), windowed(t, 148000, 166000, 400));
+
+      const pk = pkts.children;
+      const flow = mqttUp > 0.5 && t < 148000;
+      setOp(pkts, flow ? 1 : 0);
+      if (flow) {
+        for (let i = 0; i < pk.length; i++) {
+          const u = ((t / 1800) + i / pk.length) % 1;
+          const w = pktShape[i].w;
+          pk[i].setAttribute("x", String(868 + (184 - w) * u));
+        }
+      }
+
+      const shown = t >= 7000 && t < 196000;
+      const f = (
+        t < 22000 ? "topo" :
+        t < 26500 ? "pref" :
+        t < 31500 ? "short" :
+        t < 36000 ? "inner" :
+        t < 42000 ? "cache" :
+        t < 50000 ? "long" :
+        t < 68000 ? "pref" :
+        t < 76000 ? "short" :
+        t < 82000 ? "mqtt" :
+        t < 90000 ? "cloud" :
+        t < 104000 ? "short" :
+        t < 118000 ? "mqtt" :
+        t < 132000 ? "cloud" :
+        t < 140000 ? "pref" :
+        t < 148000 ? "inner" :
+        t < 154000 ? "mqtt" :
+        t < 166000 ? "edge" :
+        t < 186000 ? "long" :
+        "fail"
+      );
+      const lit = (name) => f === "topo" || f === name || (f === "cloud" && (name === "cache" || name === "long")) || (f === "edge" && (name === "pref" || name === "short" || name === "inner"));
+      function vis(el, on, name) {
+        if (!on) { setOp(el, 0); return; }
+        setOp(el, lit(name) || f === "topo" ? 1 : 0.38);
+      }
+      vis($("m-pref"), shown && t >= 22000, "pref");
+      vis($("m-short"), shown && t >= 26500, "short");
+      vis($("m-inner"), shown && t >= 31500, "inner");
+      vis($("m-cache"), shown && t >= 36000, "cache");
+      vis($("m-long"), shown && t >= 42000, "long");
+      setOp($("edge-box"), shown ? 1 : 0);
+      setOp($("cloud-box"), shown ? (f === "edge" ? 0.2 : 1) : 0);
+      if (t < 12400) {
+        setOp($("edge-box"), topo);
+        setOp($("cloud-box"), appear(t, 9400, 12400));
+      }
+      if (f === "topo") {
+        setOp($("m-pref"), 0);
+        setOp($("m-short"), 0);
+        setOp($("m-inner"), 0);
+        setOp($("m-cache"), 0);
+        setOp($("m-long"), 0);
+      }
+
+      const ind = indicateAt(t);
+      const box = $("indicate");
+      box.setAttribute("x", ind.x);
+      box.setAttribute("y", ind.y);
+      box.setAttribute("width", ind.w);
+      box.setAttribute("height", ind.h);
+      setOp(box, ind.r * (t > 7000 && t < 196000 ? 1 : 0));
+
+      const fill = $("short-fill");
+      const cap = $("short-cap");
+      if (t >= 90000 && t < 118000) {
+        const w = lerp(56, 500, clamp((t - 90000) / 12000, 0, 1));
+        fill.setAttribute("width", String(w));
+        cap.textContent = "容量";
+        cap.setAttribute("fill", t > 100000 ? "#ffe566" : "#8d877c");
+      } else if (t >= 118000 && t < 130000) {
+        fill.setAttribute("width", String(lerp(500, 0, clamp((t - 118000) / 900, 0, 1))));
+        cap.textContent = "容量";
+        cap.setAttribute("fill", "#fc6255");
+      } else if (t >= 148000 && t < 160000) {
+        fill.setAttribute("width", String(lerp(500, 280, clamp((t - 152000) / 2000, 0, 1))));
+        cap.textContent = "容量";
+        cap.setAttribute("fill", "#fc6255");
+      } else {
+        fill.setAttribute("width", "120");
+        cap.textContent = "容量";
+        cap.setAttribute("fill", "#8d877c");
+      }
+
+      const tok = $("token");
+      if (t >= 68000 && t < 90000) {
+        setOp(tok, 1);
+        const u = (t - 68000) / 22000;
+        let p;
+        if (u < 0.22) p = along(458, 412, 868, 530, u / 0.22);
+        else if (u < 0.4) p = along(868, 530, 1052, 530, (u - 0.22) / 0.18);
+        else if (u < 0.65) p = along(1052, 530, 1462, 242, (u - 0.4) / 0.25);
+        else p = along(1462, 242, 1462, 710, (u - 0.65) / 0.35);
+        tok.setAttribute("transform", `translate(${p[0]} ${p[1]})`);
+      } else setOp(tok, 0);
+
+      const starts = [[780, 412], [812, 392], [844, 432], [876, 404]];
+      const ends = [[1488, 296], [1588, 296], [1462, 600], [1462, 740]];
+      noteData.forEach((el, i) => {
+        let x = starts[i][0], y = starts[i][1], o = 0, sc = 1;
+        if (t >= 92000 && t < 106000) {
+          o = windowed(t, 92000 + i * 160, 106000, 200);
+          x = 280 + i * 70; y = 460;
+        } else if (t >= 106000 && t < 122000) {
+          o = 1;
+          const u = clamp((t - 106000 - i * 180) / 1400, 0, 1);
+          const p = along(280 + i * 70, 460, ends[i][0], ends[i][1], u);
+          x = p[0]; y = p[1];
+        } else if (t >= 122000 && t < 128000) {
+          o = 1 - clamp((t - 122000 - i * 80) / 400, 0, 1);
+          x = ends[i][0]; y = ends[i][1]; sc = 0.85 + 0.15 * o;
+        } else if (t >= 150000 && t < 160000) {
+          const grid = [[220, 460], [310, 460], [400, 460], [490, 460]];
+          x = grid[i][0]; y = grid[i][1];
+          o = 1 - clamp((t - 152000 - [0, 280, 640, 980][i]) / 280, 0, 1);
+        }
+        el.style.opacity = String(clamp(o, 0, 1));
+        el.setAttribute("transform", `translate(${x} ${y}) scale(${sc})`);
+      });
+
+      const samp = $("sample");
+      if (t >= 132000 && t < 144000) {
+        setOp(samp, 1);
+        const u = clamp((t - 132000) / 1800, 0, 1);
+        let p;
+        if (u < 0.4) p = along(1462, 710, 960, 530, u / 0.4);
+        else if (u < 0.7) p = along(960, 530, 960, 780, (u - 0.4) / 0.3);
+        else p = along(960, 780, 368, 888, (u - 0.7) / 0.3);
+        samp.setAttribute("transform", `translate(${p[0]} ${p[1]})`);
+      } else setOp(samp, 0);
+
+      const snap = $("snap");
+      if (t >= 140000 && t < 148000) {
+        setOp(snap, 1);
+        const u = clamp((t - 140000) / 1600, 0, 1);
+        let p;
+        if (u < 0.55) p = along(960, 160, 960, 800, u / 0.55);
+        else p = along(960, 800, 588, 888, (u - 0.55) / 0.45);
+        snap.setAttribute("transform", `translate(${p[0]} ${p[1]})`);
+      } else setOp(snap, 0);
+
+      ["tier0", "tier1", "tier3"].forEach((id, i) => {
+        const el = $(id);
+        const on = appear(t, 42000 + i * 180, 44800 + i * 180) * (1 - appear(t, 196000, 199000));
+        let fade = 1;
+        if (id === "tier3" && t >= 178000 && t < 196000) fade = 0.32;
+        el.style.opacity = String(on * fade);
+      });
+
+      setOp($("fail"), windowed(t, 186500, 196000, 400));
+      setOp($("grid"), t > 7000 && t < 196000 ? 0.18 : 0.08);
+
+      $("caption").innerHTML = capAt(t);
+      $("chapter").textContent = chapAt(t);
+      const p = t / DURATION;
+      $("fill").style.width = (p * 100) + "%";
+      $("knob").style.left = (p * 100) + "%";
+      $("clock").textContent = fmt(t) + " / " + fmt(DURATION);
+      $("ico-pause").style.display = playing && t < DURATION ? "block" : "none";
+      $("ico-play").style.display = playing && t < DURATION ? "none" : "block";
+    }
+
+    function fmt(ms) {
+      const s = Math.min(DURATION, Math.max(0, Math.floor(ms / 1000)));
+      return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+    }
+
+    let playing = true;
+    let t = 0;
+    const boot = new URLSearchParams(location.search);
+    if (boot.has("t")) {
+      t = Math.max(0, Number(boot.get("t")) * 1000) || 0;
+      playing = boot.get("play") === "1";
+    }
+    let last = performance.now();
+    function tick(now) {
+      if (playing) t = Math.min(DURATION, t + (now - last));
+      last = now;
+      if (t >= DURATION) playing = false;
+      render(t);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    function toggle() {
+      if (t >= DURATION) { t = 0; playing = true; last = performance.now(); return; }
+      playing = !playing;
+      last = performance.now();
+    }
+    $("play").addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
+    $("replay").addEventListener("click", (e) => { e.stopPropagation(); t = 0; playing = true; last = performance.now(); });
+    document.querySelector(".frame").addEventListener("click", toggle);
+    $("bar").addEventListener("click", (e) => {
+      const r = $("bar").getBoundingClientRect();
+      t = clamp((e.clientX - r.left) / r.width, 0, 1) * DURATION;
+      last = performance.now();
+      render(t);
+    });
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") { e.preventDefault(); toggle(); }
+      if (e.code === "ArrowRight") t = Math.min(DURATION, t + 4000);
+      if (e.code === "ArrowLeft") t = Math.max(0, t - 4000);
+    });
+  </script>
+</body>
+</html>

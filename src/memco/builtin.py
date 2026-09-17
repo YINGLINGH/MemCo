@@ -27,7 +27,7 @@ def _cache_payload(stamp: str, keyword: str, text: str) -> str:
     if isinstance(parsed, dict):
         parsed.setdefault("stamp", stamp)
         parsed.setdefault("keyword", keyword)
-        if "body" not in parsed and "text" not in parsed:
+        if "hits" not in parsed and "body" not in parsed and "text" not in parsed:
             parsed["body"] = text
         return json.dumps(parsed, ensure_ascii=False)
     return json.dumps({"stamp": stamp, "keyword": keyword, "text": text, "body": text}, ensure_ascii=False)
@@ -134,6 +134,11 @@ class MemCache:
 
     def delete_item(self, user_id: str, stamp: str, keyword: str) -> None:
         self._drop(self._iid(user_id, stamp, keyword))
+
+    def clear(self) -> None:
+        self._items.clear()
+        self._ts.clear()
+        self._kw.clear()
 
     def _touch(self, iid: str | None) -> str | None:
         if not iid:

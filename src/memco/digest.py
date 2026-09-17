@@ -54,7 +54,11 @@ def digest(turns: list[Turn], tok: Tokenizer, prior: set[str] | None = None, sta
     for kind, items in groups.items():
         if not items:
             continue
-        body = " ".join(t.user for t in items if t.user)
+        if kind == "commitment":
+            parts = [" ".join(x for x in (t.user, t.agent) if x).strip() for t in items]
+            body = " ".join(p for p in parts if p)
+        else:
+            body = " ".join(t.user for t in items if t.user)
         if not body:
             continue
         kw = tok.pick(body)

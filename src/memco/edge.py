@@ -8,7 +8,7 @@ from memco.config import MemoryConfig, at_cap
 from memco.digest import Digest, Turn, digest
 from memco.plugins import Bus, Snapshot, Tokenizer
 from memco.prefs import EMPTY_SELF, EMPTY_USER, lookup
-from memco.recall import Recall, is_empty, local_recall
+from memco.recall import Recall, format_hit, is_empty, local_recall
 from memco.routers import Route, Router, dispatch
 from memco.short import forget_random
 from memco.store import Store
@@ -89,7 +89,7 @@ class Edge:
                 dispatch(self.tok_fail, "tok.down", {"text": text})
             local = local_recall(self.store, kw, referred, self.cfg.recall_limit)
             if local:
-                result = Recall(hits=[b.line() for b in local], source="short")
+                result = Recall(hits=[format_hit(self.store, b, kw) for b in local], source="short")
             elif not self.bus.connected():
                 result = Recall(hits=t0, source="t0" if t0 else "net_down")
             else:
@@ -136,6 +136,7 @@ class Edge:
         if not live:
             return True
         texts: list[str] = []
+        sources: dict[str, str] = {}
         seen: set[str] = set()
         for bucket in live:
             sha = bucket.source_sha256
@@ -143,7 +144,9 @@ class Edge:
                 continue
             path = self.store.sources / f"{sha}.md"
             if path.is_file():
-                texts.append(path.read_text(encoding="utf-8"))
+                text = path.read_text(encoding="utf-8")
+                texts.append(text)
+                sources[sha] = text
                 seen.add(sha)
         ok = self.bus.publish(
             self.cfg.topic("archive"),
@@ -151,6 +154,7 @@ class Edge:
                 "stamp": live[-1].stamp,
                 "keyword": live[0].keyword,
                 "source": "\n\n".join(texts),
+                "sources": sources,
                 "buckets": [b.to_dict() for b in live],
                 "self_md": self.self_md(),
                 "user_md": self.user_md(),

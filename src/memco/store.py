@@ -20,6 +20,15 @@ class Store:
             path.write_text(text or "", encoding="utf-8")
         return digest
 
+    def read_source(self, sha: str) -> str:
+        digest = (sha or "").strip().lower()
+        if not digest or any(ch not in "0123456789abcdef" for ch in digest):
+            return ""
+        path = self.sources / f"{digest}.md"
+        if not path.is_file():
+            return ""
+        return path.read_text(encoding="utf-8")
+
     def write(self, bucket: Bucket) -> Path:
         bucket.archived = False
         path = self.live / f"b_{bucket.id}.md"

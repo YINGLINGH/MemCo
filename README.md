@@ -41,7 +41,7 @@ Implement these if you need them. Built-ins exist for tests.
 
 - `Tokenizer` — pick one rare keyword
 - `VectorIndex` — add / query / rebuild
-- `Cache` — set / get / delete
+- `Cache` — set / get / delete / clear
 - `Teacher.complete(task, ctx)` — `t0` and `distill`; no vendor wire format
 - `Router.route(event, payload)` — `recall.empty`, `tok.down`, `vec.down`, `gate.t0`, `gate.distill`, `session.end`. `None` is the default no-op
 - `Snapshot.load(path)` — apply a trained adapter; MemCo does not train
@@ -53,8 +53,10 @@ Implement these if you need them. Built-ins exist for tests.
 2. End of session writes every short-term bucket from that session. Preferences stay still on the edge.
 3. If live N has reached `short_cap`, the edge uploads. Success deletes those short-term live files.
 4. If live N is above `short_cap` and the bus is down, extra live short-term items are deleted at random until N equals the cap.
-5. Cloud ingest writes long-term, appends distill jsonl, and preference text, then publishes `t0` back.
-6. Recall: preferences (local) → short-term → cache → long-term + vectors. A down bus skips cache and long-term. Empty recall is the only failure; a down bus is not.
+5. Cloud ingest writes long-term, clears cache, appends distill jsonl, and preference text, then publishes `t0` back. Long-term forget also clears cache.
+6. Recall: preferences (local) → short-term → cloud. A cache hit returns the stored ranked set and boosts matching long-term ids. A miss ranks long-term + vectors, then stores that set. A down bus skips cache and long-term. Empty recall is the only failure; a down bus is not.
+
+Short-term and long-term buckets: `commitment` body is user+agent; `event` recall adds a few source lines; `feeling` body is user lines only.
 
 ## Test
 
