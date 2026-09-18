@@ -140,12 +140,6 @@
       flex-direction: column;
       justify-content: center;
     }
-    .sect-label {
-      font-size: 12px;
-      letter-spacing: 0.22em;
-      color: var(--mute);
-      margin-bottom: 8px;
-    }
     h2 {
       font-size: 30px;
       font-weight: 500;
@@ -526,13 +520,12 @@
 
     <section class="co-band">
       <div class="text">
-        <div class="sect-label">命名</div>
         <h2 class="serif">何为<span class="en">MemCo</span></h2>
         <p class="intro">Mem 是记忆。Co 既指端云协同，也指人机陪伴。</p>
         <div class="pair">
           <article>
             <h3 class="serif">端云协同</h3>
-            <p>偏好和近期内容放端侧，缓存和长期档案放云侧。中间走消息总线，投递按约定进行。断连时就近降级。断线本身不算失败。</p>
+            <p>偏好和近期内容放端侧，缓存和长期档案放云侧。中间走消息总线，消息按事先约定送达并确认。断连时就近降级。断线本身不算失败。</p>
           </article>
           <article>
             <h3 class="serif">人机陪伴</h3>
@@ -546,12 +539,11 @@
     </section>
 
     <section class="topo">
-      <div class="sect-label">架构</div>
       <h2 class="serif">记忆分置于端云</h2>
       <div class="topo-grid">
         <div class="realm edge">
           <h3 class="serif">端侧</h3>
-          <p>贴着用户。对话、偏好、快照，都在本地。</p>
+          <p>贴近用户。对话、偏好、快照，都在本地。</p>
           <div class="chips">
             <span>偏好</span>
             <span>短期记忆</span>
@@ -581,7 +573,6 @@
 
     <section class="five">
       <div class="five-head">
-        <div class="sect-label">五种记忆</div>
         <h2 class="serif">产生、维持、遗忘</h2>
         <div class="legend">
           <span class="stamp born">产生</span>
@@ -652,7 +643,7 @@
             <div class="life">
               <section class="born">
                 <h4>产生</h4>
-                <p>云侧把稀缺样本写入蒸馏文件。训练在系统外做。快照路径经总线发到端侧，本系统只加载，不训练。</p>
+                <p>云侧把稀缺样本写入蒸馏文件。训练在系统外做。快照路径经总线发到端侧，端侧只加载，不训练。</p>
               </section>
               <section class="keep">
                 <h4>维持</h4>
@@ -683,7 +674,7 @@
             <div class="life">
               <section class="born">
                 <h4>产生</h4>
-                <p>召回没命中时，对长期记忆和向量排好序，按关键词或时间键把整组结果写进去。</p>
+                <p>召回没命中时，按关键词、时间和语义相近程度给长期记忆排序，再按关键词或时间键把整组结果写进去。</p>
               </section>
               <section class="keep">
                 <h4>维持</h4>
@@ -723,7 +714,6 @@
     </section>
 
     <section class="path">
-      <div class="sect-label" style="color:#ffd27a">召回</div>
       <h2 class="serif">召回顺序</h2>
       <p class="hint">先查端侧，没有再问云侧。总线断开时，只使用端侧的偏好和短期记忆。</p>
       <ol class="steps">
@@ -733,7 +723,7 @@
         <li><b>缓存</b><span>命中即返回，并加权</span></li>
         <li><b>长期</b><span>检索后写入缓存</span></li>
       </ol>
-      <p class="fail">总线断连会降级到端侧。需要召回但结果为空，才是优雅失败。</p>
+      <p class="fail">总线断连会降级到端侧。需要召回但结果为空，即为优雅失败。</p>
     </section>
 
     <section class="close">
