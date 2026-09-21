@@ -10,6 +10,21 @@ pip install -e .
 
 MQTT is optional: `pip install -e ".[mqtt]"`
 
+Laya is an optional host adapter, not part of the memory kernel. MemCo runs without it. `pip install -e ".[laya]"` then tag turns and optionally gate `t0` / distill:
+
+```python
+from memco.laya import LayaGate, LayaHost
+
+host = LayaHost()
+flags = host.tag(user, agent)
+edge.add(flags.turn(user, agent))
+edge.recall(user, need=flags.need, pref=flags.pref, keyword=kw, referred=None)
+
+Cloud(..., gate=LayaGate())
+```
+
+`flags.ok` is false if Laya is missing or a predict fails; flags then match `Turn` defaults and gates return `None`. High-confidence answers only (default 0.85). `LayaHost` and `LayaGate` share one loaded checkpoint per model name.
+
 ## Defaults
 
 | Name | Default | Special |
@@ -44,6 +59,7 @@ Implement these if you need them. Built-ins exist for tests.
 - `Cache` — set / get / delete / clear
 - `Teacher.complete(task, ctx)` — `t0` and `distill`; no vendor wire format
 - `Router.route(event, payload)` — `recall.empty`, `tok.down`, `vec.down`, `gate.t0`, `gate.distill`, `session.end`. `None` is the default no-op
+- `memco.laya` — optional. `LayaHost` fills `Turn.kind` / `unresolved` / `high_emotion` and recall `need` / `pref`. `LayaGate` implements `gate.t0` and `gate.distill`. The kernel does not import this module
 - `Snapshot.load(path)` — apply a trained adapter; MemCo does not train
 - `Backup.dump` / `restore` — not implemented; optional
 
