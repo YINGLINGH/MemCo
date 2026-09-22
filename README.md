@@ -2,6 +2,10 @@
 
 Memory for edge-cloud agents. The edge keeps preferences and short-term notes. The cloud keeps cache, long-term notes, and distill samples. Training is out of band: MemCo writes samples and loads a snapshot path through an interface you implement.
 
+## License
+
+MemCo is licensed under the [Apache License, Version 2.0](LICENSE).
+
 ## Install
 
 ```bash
