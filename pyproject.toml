@@ -7,6 +7,7 @@ name = "memco"
 version = "0.1.0"
 description = "Edge-cloud memory for collaborative agents."
 readme = "README.md"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.9"
 dependencies = ["pyyaml>=6"]
 
